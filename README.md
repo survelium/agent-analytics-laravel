@@ -25,6 +25,17 @@ PHP 8.2+, Laravel 11, 12 or 13.
 
 ## Installation
 
+> **Until the packages are on Packagist**, add both GitHub repositories to your app's `composer.json` first:
+>
+> ```json
+> "repositories": [
+>     { "type": "vcs", "url": "https://github.com/survelium/agent-analytics-laravel" },
+>     { "type": "vcs", "url": "https://github.com/survelium/agent-analytics-php" }
+> ]
+> ```
+>
+> and require the development line: `composer require survelium/agent-analytics-laravel:^0.1@dev`.
+
 ```bash
 composer require survelium/agent-analytics-laravel
 ```
@@ -44,6 +55,16 @@ php artisan survelium:status
 
 That is all. The middleware is added to the `web` group automatically and does its work in `terminate()`,
 after the response has been sent. Without a key nothing is recorded, so local and CI stay quiet.
+
+### Before you go live, check
+
+- **Behind Cloudflare or a load balancer:** configure Laravel's trusted proxies (see [Configuration](#configuration)),
+  or every crawler arrives with the proxy's IP and Survelium cannot verify it.
+- **The scheduler runs** (`* * * * * php artisan schedule:run` in cron). Without it data still goes out, but only
+  when new visits arrive.
+- **A full-page cache in front of PHP** (Varnish, LiteSpeed, Cloudflare "cache everything", `spatie/laravel-responsecache`
+  served by the web server) means cached pages never reach Laravel, so crawlers reading them are not seen. Exclude
+  AI crawler user agents from that cache.
 
 ## How it sends
 
