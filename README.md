@@ -1,42 +1,84 @@
-# :package_description
+# Survelium Agent Analytics for Laravel
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/:vendor_slug/:package_slug.svg?style=flat-square)](https://packagist.org/packages/:vendor_slug/:package_slug)
-[![Tests](https://github.com/spatie/package-skeleton-php/actions/workflows/run-tests-pest.yml/badge.svg)](https://github.com/:vendor_slug/:package_slug/actions/workflows/run-tests.yml)
-[![Total Downloads](https://img.shields.io/packagist/dt/:vendor_slug/:package_slug.svg?style=flat-square)](https://packagist.org/packages/:vendor_slug/:package_slug)
-<!--delete-->
----
-This package can be used as to scaffold a framework agnostic package. Follow these steps to get started:
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/survelium/agent-analytics-laravel.svg?style=flat-square)](https://packagist.org/packages/survelium/agent-analytics-laravel)
+[![Tests](https://img.shields.io/github/actions/workflow/status/survelium/agent-analytics-laravel/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/survelium/agent-analytics-laravel/actions/workflows/run-tests.yml)
 
-1. Press the "Use template" button at the top of this repo to create a new repo with the contents of this skeleton
-2. Run "php ./configure.php" to run a script that will replace all placeholders throughout all the files
-3. Have fun creating your package.
-4. If you need help creating a package, consider picking up our <a href="https://laravelpackage.training">Laravel Package Training</a> video course.
----
-<!--/delete-->
-This is where your description should go. Try and limit it to a paragraph or two. Consider adding a small example.
+See which AI crawlers read your Laravel site and how many people AI assistants send you, in
+[Survelium](https://survelium.com).
 
-## Support us
+AI crawlers (GPTBot, ClaudeBot, PerplexityBot, …) do not run JavaScript, so a JS snippet never sees them. This
+package adds a middleware that recognises them on the server, plus visitors arriving from ChatGPT, Perplexity,
+Claude, Gemini or Copilot, and sends them to Survelium in batches from your queue. It is built on
+[`survelium/agent-analytics-php`](https://github.com/survelium/agent-analytics-php).
 
-[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/:package_name.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/:package_name)
+## What leaves your server
 
-We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
+| | Sent | Never sent |
+|---|---|---|
+| AI crawler hit | time, user agent, path, HTTP status, IP (to verify it is really that crawler) | — |
+| Visitor from an AI assistant | time, assistant domain (e.g. `chatgpt.com`), path, user agent | IP, full referrer, cookies, session |
+| Every other page view | a daily count, used for "share of traffic from AI" | anything about the request |
 
-We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
+## Requirements
+
+PHP 8.2+, Laravel 11, 12 or 13.
 
 ## Installation
 
-You can install the package via composer:
+```bash
+composer require survelium/agent-analytics-laravel
+```
+
+Add your ingest key (Survelium → AI traffic → Integration) to `.env`:
+
+```dotenv
+SURVELIUM_INGEST_KEY=svk_...
+```
+
+Check it works:
 
 ```bash
-composer require :vendor_slug/:package_slug
+php artisan survelium:flush --force   # sends now; expects "Survelium answered 202"
+php artisan survelium:status
 ```
 
-## Usage
+That is all. The middleware is added to the `web` group automatically and does its work in `terminate()`,
+after the response has been sent. Without a key nothing is recorded, so local and CI stay quiet.
 
-```php
-$skeleton = new VendorName\Skeleton();
-echo $skeleton->echoPhrase('Hello, VendorName!');
+## How it sends
+
+- Hits are buffered in `storage/app/survelium`. Every 50 items or 60 seconds a `FlushAgentAnalytics` job is
+  queued (at most one a minute). On the `sync` queue it runs after the response, so visitors never wait.
+- `survelium:flush` is scheduled every five minutes, so the buffer and the daily total also go out on quiet
+  days. This needs the Laravel scheduler (`schedule:run` in cron) to be running.
+- If Survelium is unreachable the data stays buffered and is retried with back-off; a revoked key or a plan
+  without AI traffic pauses sending without losing data.
+
+Only page views are tracked: `GET`/`HEAD` requests that are not XHR, Livewire or prefetch requests.
+
+## Configuration
+
+```bash
+php artisan vendor:publish --tag="survelium-config"
 ```
+
+| Option | Default | |
+|---|---|---|
+| `ingest_key` | `SURVELIUM_INGEST_KEY` | Nothing happens while empty. |
+| `enabled` | `SURVELIUM_ENABLED`, `true` | |
+| `track_referrals` | `true` | `false` = crawlers only. |
+| `middleware_groups` | `['web']` | Set `[]` and add `TrackAgentAnalytics` yourself for full control. |
+| `deny_paths` | Telescope, Horizon, Pulse, Debugbar, `/up` | Path prefixes neither reported nor counted. |
+| `storage_path` | `storage/app/survelium` | |
+| `queue.connection`, `queue.name` | app default | `SURVELIUM_QUEUE_CONNECTION`, `SURVELIUM_QUEUE`. |
+| `schedule` | `true` | Registers `survelium:flush` every five minutes. |
+
+Behind a load balancer or Cloudflare, configure Laravel's
+[trusted proxies](https://laravel.com/docs/requests#configuring-trusted-proxies) so `$request->ip()` returns the
+crawler's real IP; otherwise Survelium cannot verify it.
+
+If you run several web servers, each keeps its own buffer and daily count. Crawler hits add up correctly, but the
+daily total is taken from one server at a time, so the AI share reads higher than it is.
 
 ## Testing
 
@@ -46,21 +88,12 @@ composer test
 
 ## Changelog
 
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+See [CHANGELOG](CHANGELOG.md).
 
-## Contributing
+## Security
 
-Please see [CONTRIBUTING](https://github.com/spatie/.github/blob/main/CONTRIBUTING.md) for details.
-
-## Security Vulnerabilities
-
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
-
-## Credits
-
-- [:author_name](https://github.com/:author_username)
-- [All Contributors](../../contributors)
+Please report vulnerabilities through [GitHub security advisories](../../security/advisories/new), not in issues.
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+The MIT License (MIT). See [License File](LICENSE.md).

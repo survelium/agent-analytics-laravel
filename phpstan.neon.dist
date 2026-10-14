@@ -1,0 +1,10 @@
+includes:
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+    paths:
+        - src
+    tmpDir: build/phpstan
+    # The bound HTTP kernel is only typed by PHPDoc; apps can bind their own.
+    treatPhpDocTypesAsCertain: false

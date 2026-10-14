@@ -1,46 +1,78 @@
 {
-    "name": ":vendor_slug/:package_slug",
-    "description": ":package_description",
+    "name": "survelium/agent-analytics-laravel",
+    "description": "Laravel integration for Survelium agent analytics: report AI crawlers and AI-referred visitors server-side.",
     "keywords": [
-        ":vendor_name",
-        ":package_slug"
+        "survelium",
+        "laravel",
+        "ai-crawlers",
+        "gptbot",
+        "analytics"
     ],
-    "homepage": "https://github.com/:vendor_slug/:package_slug",
+    "homepage": "https://github.com/survelium/agent-analytics-laravel",
     "license": "MIT",
     "authors": [
         {
-            "name": ":author_name",
-            "email": "author@domain.com",
+            "name": "Catalin Prodan",
+            "email": "catalin.prodan@newpixel.ro",
             "role": "Developer"
         }
     ],
     "require": {
-        "php": "^8.4"
+        "php": "^8.2",
+        "illuminate/contracts": "^11.0||^12.0||^13.0",
+        "spatie/laravel-package-tools": "^1.16",
+        "survelium/agent-analytics-php": "^0.1"
     },
     "require-dev": {
-        :require_dev_testing,
-        :require_dev_codestyle,
-        "spatie/ray": "^1.28"
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.14",
+        "nunomaduro/collision": "^8.1",
+        "orchestra/testbench": "^9.0||^10.0||^11.0",
+        "pestphp/pest": "^3.0||^4.0",
+        "pestphp/pest-plugin-arch": "^3.0||^4.0",
+        "pestphp/pest-plugin-laravel": "^3.0||^4.0",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0"
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/survelium/agent-analytics-php"
+        }
+    ],
     "autoload": {
         "psr-4": {
-            "VendorName\\Skeleton\\": "src"
+            "Survelium\\LaravelAgentAnalytics\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "VendorName\\Skeleton\\Tests\\": "tests"
+            "Survelium\\LaravelAgentAnalytics\\Tests\\": "tests/"
         }
     },
     "scripts": {
-        :scripts_testing,
-        :scripts_codestyle
+        "post-autoload-dump": "@composer run prepare",
+        "prepare": "@php vendor/bin/testbench package:discover --ansi",
+        "analyse": "vendor/bin/phpstan analyse",
+        "test": "vendor/bin/pest",
+        "format": "vendor/bin/pint"
     },
     "config": {
         "sort-packages": true,
         "allow-plugins": {
-            :plugins_testing,
+            "pestphp/pest-plugin": true,
             "phpstan/extension-installer": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Survelium\\LaravelAgentAnalytics\\AgentAnalyticsServiceProvider"
+            ]
+        },
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
         }
     },
     "minimum-stability": "dev",
