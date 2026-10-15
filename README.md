@@ -17,7 +17,7 @@ Claude, Gemini or Copilot, and sends them to Survelium in batches from your queu
 |---|---|---|
 | AI crawler hit | time, user agent, path, HTTP status, IP (to verify it is really that crawler) | — |
 | Visitor from an AI assistant | time, assistant domain (e.g. `chatgpt.com`), path, user agent | IP, full referrer, cookies, session |
-| Every other page view | a daily count, used for "share of traffic from AI" | anything about the request |
+| Every page view by a person | a daily count, used for "share of traffic from AI" (other bots — Googlebot, SEO tools, monitors — are not counted) | anything about the request |
 
 ## Requirements
 
